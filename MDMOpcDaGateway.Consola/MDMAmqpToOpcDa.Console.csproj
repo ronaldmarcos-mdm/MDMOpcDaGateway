@@ -83,9 +83,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MDMOpcDaGateway.Source\MDMOpcDaGateway.Sources.csproj">
+    <ProjectReference Include="..\MDMOpcDaGateway.Source\MDMAmqpToOpcDa.Sources.csproj">
       <Project>{6bdfe992-e0bc-45f7-8f47-fd25cd987e79}</Project>
-      <Name>MDMOpcDaGateway.Sources</Name>
+      <Name>MDMAmqpToOpcDa.Sources</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

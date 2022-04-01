@@ -1,4 +1,5 @@
-﻿using MDMOpcDaGateway.Sources.Interfaces;
+﻿using DriverAmqp.Sources;
+using MDMAmqpToOpcDa.Sources;
 using Opc.Da;
 using System;
 using System.Collections;
@@ -7,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace MDMOpcDaGateway.Sources
 {
@@ -23,7 +23,7 @@ namespace MDMOpcDaGateway.Sources
 			private Server server;
 			private List<ItemOpcDa> listItemOpcDa;
 			private List<Item> listItems;
-
+			private List<ItemOpcDa.ItemOPCMapResult> listToAmqpMsg;
 
 			static Item[] itemsToAdd;
 			static ItemValue[] writeValues;
@@ -33,7 +33,7 @@ namespace MDMOpcDaGateway.Sources
 			{
 				listItemOpcDa = new List<ItemOpcDa>();
 				listItems = new List<Item>();
-
+				listToAmqpMsg = new List<ItemOpcDa.ItemOPCMapResult>();
 			}
 
 			public override void Init()
@@ -76,8 +76,9 @@ namespace MDMOpcDaGateway.Sources
 
 			public void WriteValuesToOpcDa(ArrayList itemNames, ArrayList itemValues)
 			{
-				List<Item> itemsNotFound;			
+				List<Item> itemsNotFound;
 				//Console.WriteLine("Writing Items' Values to Server... \n");				
+				SetAndSaveAmqpMsg(itemNames, itemValues);
 
 				//create the items to write (if the group does not have it, we need to insert it)
 				itemsToAdd = new Item[itemNames.Count];
@@ -181,6 +182,31 @@ namespace MDMOpcDaGateway.Sources
 				}
 				//Console.WriteLine("Not-Found Items Size = {0}\n", itemsNotFound.Count);	
 				return itemsNotFound;
+			}
+
+			private void SetAndSaveAmqpMsg(ArrayList itemNames, ArrayList itemValues)
+			{
+				for (int i = 0; i < itemNames.Count; i++)
+				{
+					try
+					{ 
+						var resultAmqp = new ItemOpcDa.ItemOPCMapResult
+						{
+							ItemName = (string)itemNames[i],
+							TimeStamp = DateTime.Now,
+							Validated = true,
+							Value = itemValues[i],
+						};
+						listToAmqpMsg.Add(resultAmqp);
+					}
+					catch (Exception e)
+					{
+						throw e;
+					}
+				}
+				var myAmqpMsg = new AmqpMsgType() { Data = listToAmqpMsg.ToArray() };
+				Util.SaveJsonFile(myAmqpMsg, Path.Combine(Process.base_path, Process.pathJsoAmqpMsg));
+
 			}
 
 			private void PrintItemsNames()

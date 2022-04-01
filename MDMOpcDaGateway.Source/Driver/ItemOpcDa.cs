@@ -93,7 +93,6 @@ namespace MDMOpcDaGateway.Sources
 
 			}
 
-
 			public static ItemDriver CreateItemDriver(ItemOpcDa _item)
 			{
 				ItemDriver itemDriver = new ItemDriver

@@ -18,7 +18,8 @@ namespace MDMOpcDaGateway.Sources
 			private static readonly string path = @"config.ini";
 			private static readonly string pathCsvOpcDa = @"opc_da_map.csv";
 			private static readonly string pathCsvMatrikon = @"dataMatrikon";
-			private static readonly string base_path = AppDomain.CurrentDomain.BaseDirectory;
+			public static readonly string base_path = AppDomain.CurrentDomain.BaseDirectory;
+			public static readonly string pathJsoAmqpMsg = @"lastDataAmqpMsg.json";
 			public static bool runOnce = true;
 			private static IniData config;
 
@@ -45,48 +46,7 @@ namespace MDMOpcDaGateway.Sources
 				log = _log;
 				Console.WriteLine("process..");
 			}
-			public static void LoadConfig()
-			{				
-				log.Info(string.Format("Loading Config ..."));
-				string fullPath = Path.Combine(base_path, path);
-				log.Info(string.Format(fullPath));
-				Console.WriteLine("path to file: " + fullPath);
-
-				var parser = new FileIniDataParser();
-				listDrivers = new List<Driver>();
-				Items = new List<ItemDriver>();
-
-				if (File.Exists(fullPath))
-				{
-					config = parser.ReadFile(fullPath);				
-					foreach (SectionData section in config.Sections.ToArray())
-					{
-						log.Debug("Section Name: " + section.SectionName);					
-						foreach (KeyData key in section.Keys.ToArray())
-						{
-							log.Debug("Key Name:  " + key.KeyName + " Value:   " + key.Value.ToString());
-						}
-
-						string DriverType = config[section.SectionName]["Driver"];
-
-						if (DriverType == "OPCClient")
-						{						
-							Driver opcda = new OPCClientDa();
-							AddDriver(opcda, section);
-						}						
-						else
-						{
-							log.Info(DriverType + " : No reconized!");
-						}
-					}
-				}
-				else
-				{
-					log.Error("Ini File Configuration no exists!:  " + fullPath);
-					config = null;
-				}
-
-			}		
+				
 
 			public void OnStart()
 			{						
@@ -103,19 +63,69 @@ namespace MDMOpcDaGateway.Sources
 				Console.WriteLine("Writing Items' Values to Server... \n");
 				InitRabbitMQ();
 			}
-		
 
-		    public static void InitRabbitMQ()
+			public static void LoadConfig()
 			{
-				opcDa = new OPCClientDa();
+				log.Info(string.Format("Loading Config ..."));
+				string fullPath = Path.Combine(base_path, path);
+				log.Info(string.Format(fullPath));
+				Console.WriteLine("path to file: " + fullPath);
+
+				var parser = new FileIniDataParser();
+				listDrivers = new List<Driver>();
+				Items = new List<ItemDriver>();
+
+				if (File.Exists(fullPath))
+				{
+					config = parser.ReadFile(fullPath);
+					foreach (SectionData section in config.Sections.ToArray())
+					{
+						log.Debug("Section Name: " + section.SectionName);
+						foreach (KeyData key in section.Keys.ToArray())
+						{
+							log.Debug("Key Name:  " + key.KeyName + " Value:   " + key.Value.ToString());
+						}
+
+						string DriverType = config[section.SectionName]["Driver"];
+
+						if (DriverType == "OPCClient")
+						{
+							Driver opcda = new OPCClientDa();
+							AddDriver(opcda, section);
+						}
+						else
+						{
+							log.Info(DriverType + " : No reconized!");
+						}
+					}
+				}
+				else
+				{
+					log.Error("Ini File Configuration no exists!:  " + fullPath);
+					config = null;
+				}
+			}
+
+			public static void InitRabbitMQ()
+			{				
 				log.Info(string.Format("Loading Amqp Driver Config..."));
 				var amqpConfig = Util.LoadAmqpConfig();
 				amqp = WrapperConnection.GetInstance();
 				amqp.SetConfig = amqpConfig;
 				Console.WriteLine("Connecting Amqp Driver...");
-				amqp.Connect();
-				Console.WriteLine("Amqp Driver Connected");
-				log.Info(string.Format("Amqp Driver Connected"));
+
+				try
+				{	
+					amqp.Connect();
+					Console.WriteLine("Amqp Driver Connected");
+					log.Info(string.Format("Amqp Driver Connected"));
+
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine(e);
+					log.Error(e);
+				}			
 
 				exchange = amqpConfig.amqp.exchange; //"ANAQ.STREAM";
 				routinKey = amqpConfig.amqp.baseRoutingKey;//"ALTO.StreamDataEstadosEquipamento.Json";
